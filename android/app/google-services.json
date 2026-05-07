@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "742496189709",
+    "project_id": "gift-store-4df43",
+    "storage_bucket": "gift-store-4df43.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:742496189709:android:73ecbb6ec534483a9ec444",
+        "android_client_info": {
+          "package_name": "com.example.gift_store"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC8ShaoIGR3dCQBU4pMRqSYhu36qhpEZeg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:742496189709:android:1e483152f54287079ec444",
+        "android_client_info": {
+          "package_name": "com.example.gifts_store"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC8ShaoIGR3dCQBU4pMRqSYhu36qhpEZeg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
