@@ -1,42 +1,6 @@
-// import 'package:flutter/material.dart';
-// import 'package:firebase_auth/firebase_auth.dart';
-// import 'package:gifts_store/screens/auth_screen.dart';
-// import 'package:gifts_store/screens/profile_screen.dart';
-
-// class HomeScreen extends StatefulWidget {
-//   const HomeScreen({super.key});
-
-//   @override
-//   State<HomeScreen> createState() => _HomeScreenState();
-// }
-
-// class _HomeScreenState extends State<HomeScreen> {
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//         backgroundColor: const Color.fromARGB(255, 213, 160, 160),
-//         body: Column(
-//           children: [
-//             Text("hi ggggggggg"),
-//             IconButton(
-//               onPressed: () async {
-//                 await FirebaseAuth.instance.signOut();
-
-//                 Navigator.pushAndRemoveUntil(
-//                   context,
-//                   MaterialPageRoute(builder: (_) => const AuthScreen()),
-//                   (route) => false,
-//                 );
-//               },
-//               icon: Icon(Icons.logout),
-//             ),
-//             const ProfileScreen(),
-//           ],
-//         ));
-//   }
-// }
 import 'package:flutter/material.dart';
 import 'package:gifts_store/screens/product_details_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -47,53 +11,21 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   String selectedCategory = "الكل";
-
-  /// 📦 بيانات تجريبية
-  final List<Map<String, dynamic>> allProducts = [
-    {
-      "name": "Mystery Box",
-      "price": "129",
-      "image": "assets/images/gift.png",
-      "category": "Mystery",
-    },
-    {
-      "name": "Flower Box",
-      "price": "150",
-      "image": "assets/images/gift.png",
-      "category": "Flowers",
-    },
-    {
-      "name": "Perfume",
-      "price": "200",
-      "image": "assets/images/gift.png",
-      "category": "Perfumes",
-    },
-    {
-      "name": "Sweets Box",
-      "price": "99",
-      "image": "assets/images/gift.png",
-      "category": "Sweets",
-    },
-  ];
-
-  List<Map<String, dynamic>> get filteredProducts {
-    if (selectedCategory == "الكل") return allProducts;
-    return allProducts.where((p) => p["category"] == selectedCategory).toList();
-  }
-
+  final TextEditingController searchController = TextEditingController();
+  String searchText = "";
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
         child: Column(
           children: [
-            /// 🔥 AppBar
+            ///  AppBar
             Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
                   const Text(
-                    "Mystery Gifts",
+                    "Hafora Gifts",
                     style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 12),
@@ -105,8 +37,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       color: const Color.fromRGBO(250, 235, 250, 1),
                       borderRadius: BorderRadius.circular(14),
                     ),
-                    child: const TextField(
-                      decoration: InputDecoration(
+                    child: TextField(
+                      controller: searchController,
+                      onChanged: (value) {
+                        setState(() {
+                          searchText = value.toLowerCase();
+                        });
+                      },
+                      decoration: const InputDecoration(
                         border: InputBorder.none,
                         hintText: "بحث...",
                         prefixIcon: Icon(Icons.search),
@@ -127,7 +65,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
             const SizedBox(height: 30),
 
-            /// ⭐ الأقسام (ثابتة)
+            ///  الأقسام (ثابتة)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: CategoriesSection(
@@ -146,7 +84,10 @@ class _HomeScreenState extends State<HomeScreen> {
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: ProductsSection(products: filteredProducts),
+                child: ProductsSection(
+                  category: selectedCategory,
+                  searchText: searchText,
+                ),
               ),
             ),
           ],
@@ -179,7 +120,7 @@ class BannerWidget extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "صندوق المفأجات",
+                  "مكانك لتختار ",
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 20,
@@ -188,7 +129,7 @@ class BannerWidget extends StatelessWidget {
                 ),
                 SizedBox(height: 8),
                 Text(
-                  "احصل على هدية مفأجاة",
+                  " افضل الهدايا  ",
                   style: TextStyle(color: Colors.white70),
                 ),
               ],
@@ -197,6 +138,8 @@ class BannerWidget extends StatelessWidget {
           Positioned(
             right: 0,
             bottom: 0,
+            //https://i.imgur.com/l817Fvr.jpeg
+
             child: Image.asset("assets/images/gift.png", height: 140),
           ),
         ],
@@ -218,14 +161,14 @@ class CategoriesSection extends StatelessWidget {
 
   final Map<String, String> categoryImages = const {
     "الكل": "assets/images/gift.png",
-    "عناية": "assets/images/son.png",
-    "ورد": "assets/images/fl.png",
-    "سناكات": "assets/images/sna.png",
+    "عناية": "assets/images/skin.png",
+    " باقةورد": "assets/images/fl.png",
+    "سناك": "assets/images/snak.png",
   };
 
   @override
   Widget build(BuildContext context) {
-    final categories = ["الكل", "عناية", "ورد", "سناكات"];
+    final categories = ["الكل", "عناية", "باقة ورد", "سناك"];
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -268,105 +211,103 @@ class CategoriesSection extends StatelessWidget {
   }
 }
 
-/// ================= PRODUCTS =================
 class ProductsSection extends StatelessWidget {
-  final List<Map<String, dynamic>> products;
+  final String category;
+  final String searchText;
 
-  const ProductsSection({super.key, required this.products});
+  const ProductsSection({
+    super.key,
+    required this.category,
+    required this.searchText,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return GridView.builder(
-      itemCount: products.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 0.75,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-      ),
-      itemBuilder: (_, i) {
-        final product = products[i];
+    return StreamBuilder(
+      stream: FirebaseFirestore.instance.collection('products').snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-        return GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => ProductDetailsScreen(product: product),
+        final products = snapshot.data!.docs;
+
+        // 🔥 نفس فلترة التصنيفات بدون تغيير
+        final filteredByCategory = category == "الكل"
+            ? products
+            : products.where((doc) => doc['category'] == category).toList();
+
+        // 🔥 إضافة البحث فقط فوق الموجود
+        final filtered = searchText.isEmpty
+            ? filteredByCategory
+            : filteredByCategory.where((doc) {
+                final name = doc['name'].toString().toLowerCase();
+                return name.contains(searchText);
+              }).toList();
+
+        return GridView.builder(
+          itemCount: filtered.length,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            childAspectRatio: 0.75,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+          ),
+          itemBuilder: (_, i) {
+            final product = filtered[i];
+
+            return GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ProductDetailsScreen(
+                      product: product.data(),
+                    ),
+                  ),
+                );
+              },
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  boxShadow: [
+                    BoxShadow(
+                      blurRadius: 10,
+                      color: Colors.grey.withOpacity(0.1),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: Image.network(
+                        product['image'] ?? '',
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return const Icon(
+                            Icons.broken_image,
+                            color: Colors.grey,
+                          );
+                        },
+                      ),
+                    ),
+                    Text(product['name']),
+                    Text(
+                      "${product['price']}ر.ي",
+                      style: const TextStyle(color: Color(0xFF7B3FE4)),
+                    ),
+                    Text(
+                      product['category'],
+                      style: const TextStyle(fontSize: 11, color: Colors.grey),
+                    ),
+                  ],
+                ),
               ),
             );
           },
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(18),
-              boxShadow: [
-                BoxShadow(blurRadius: 10, color: Colors.grey.withOpacity(0.1)),
-              ],
-            ),
-            child: Column(
-              children: [
-                Expanded(child: Image.asset(product["image"])),
-                Text(product["name"]),
-                Text(
-                  "${product["price"]} ر.س",
-                  style: const TextStyle(color: Color(0xFF7B3FE4)),
-                ),
-                Text(
-                  product["category"],
-                  style: const TextStyle(fontSize: 11, color: Colors.grey),
-                ),
-              ],
-            ),
-          ),
         );
       },
     );
   }
 }
-
-// class _CustomBottomNavState extends State<CustomBottomNav> {
-//   int index = 0;
-
-//   final List<Widget> pages = [
-//     const HomeScreen(),
-//     const ShoppingScreen(),
-//     const FavoriteScreen(),
-//     const ProfileScreen(),
-//   ];
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       body: pages[index],
-//       bottomNavigationBar: BottomNavigationBar(
-//         currentIndex: index,
-//         selectedItemColor: const Color.fromARGB(255, 76, 6, 95),
-//         unselectedItemColor: Colors.grey,
-//         onTap: (i) {
-//           setState(() {
-//             index = i;
-//           });
-//         },
-//         items: const [
-//           BottomNavigationBarItem(
-//             icon: Icon(Icons.home),
-//             label: "الرئيسية",
-//           ),
-//           BottomNavigationBarItem(
-//             icon: Icon(Icons.shopping_cart),
-//             label: "السلة",
-//           ),
-//           BottomNavigationBarItem(
-//             icon: Icon(Icons.favorite),
-//             label: "المفضلات",
-//           ),
-//           BottomNavigationBarItem(
-//             icon: Icon(Icons.person),
-//             label: "حسابي",
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-// }

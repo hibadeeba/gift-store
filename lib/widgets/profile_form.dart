@@ -2,8 +2,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:gifts_store/services/db_service.dart';
 import 'package:gifts_store/screens/auth_screen.dart';
-import 'package:gifts_store/screens/favorite_screen.dart';
-import 'package:gifts_store/screens/shopping_screen.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -21,44 +19,7 @@ class ProfilePage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // طلباتي
-            profileItem(
-              icon: Icons.shopping_bag_outlined,
-              title: "طلباتي",
-              onTap: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const ShoppingScreen(),
-                  ),
-                );
-              },
-            ),
-
             const SizedBox(height: 20),
-
-            // المفضلة
-            profileItem(
-              icon: Icons.favorite_border,
-              title: "المفضلة",
-              onTap: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const FavoriteScreen(),
-                  ),
-                );
-              },
-            ),
-
-            const SizedBox(height: 20),
-
-            // الإعدادات
-            profileItem(
-              icon: Icons.settings_outlined,
-              title: "الإعدادات",
-              onTap: () {},
-            ),
 
             const SizedBox(height: 20),
 

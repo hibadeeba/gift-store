@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ProductDetailsScreen extends StatefulWidget {
   final Map<String, dynamic> product;
@@ -11,7 +13,58 @@ class ProductDetailsScreen extends StatefulWidget {
 
 class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   int quantity = 1;
+
   bool isFavorite = false;
+
+  String favoriteId = '';
+
+  // ================= CHECK FAVORITE =================
+  Future<void> checkFavorite() async {
+    final user = FirebaseAuth.instance.currentUser;
+
+    final query = await FirebaseFirestore.instance
+        .collection('favorites')
+        .where("name", isEqualTo: widget.product["name"])
+        .where("userId", isEqualTo: user!.uid)
+        .get();
+
+    if (query.docs.isNotEmpty) {
+      setState(() {
+        isFavorite = true;
+        favoriteId = query.docs.first.id;
+      });
+    }
+  }
+
+  // ================= ADD TO CART =================
+  Future<void> addToCart() async {
+    final user = FirebaseAuth.instance.currentUser;
+
+    await FirebaseFirestore.instance.collection('cart').add({
+      "name": widget.product["name"],
+      "price": widget.product["price"],
+      "image": widget.product["image"],
+      "category": widget.product["category"],
+      "quantity": quantity,
+      "status": "قيد المراجعة",
+      "userId": user!.uid,
+      "created_at": DateTime.now(),
+    });
+
+    print(user.uid);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("تمت الإضافة للسلة"),
+      ),
+    );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    checkFavorite();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,23 +73,40 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     return Scaffold(
       body: Column(
         children: [
-          /// 🔥 الصورة + AppBar
+          /// ================= IMAGE =================
           Stack(
             children: [
               Container(
                 height: 320,
                 width: double.infinity,
-                decoration: BoxDecoration(
-                  color: const Color.fromARGB(255, 226, 214, 226),
-                  borderRadius: const BorderRadius.only(
+                decoration: const BoxDecoration(
+                  color: Color.fromARGB(255, 226, 214, 226),
+                  borderRadius: BorderRadius.only(
                     bottomLeft: Radius.circular(30),
                     bottomRight: Radius.circular(30),
                   ),
                 ),
-                child: Image.asset(product["image"], fit: BoxFit.contain),
+                child: Image.network(
+                  product["image"] ?? '',
+                  fit: BoxFit.contain,
+                  loadingBuilder: (context, child, progress) {
+                    if (progress == null) return child;
+
+                    return const Center(
+                      child: CircularProgressIndicator(),
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Icon(
+                      Icons.image_not_supported,
+                      size: 60,
+                      color: Colors.grey,
+                    );
+                  },
+                ),
               ),
 
-              /// زر الرجوع
+              /// ================= BACK =================
               Positioned(
                 top: 40,
                 left: 8,
@@ -49,7 +119,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                 ),
               ),
 
-              /// زر المفضلة
+              /// ================= FAVORITE =================
               Positioned(
                 top: 40,
                 right: 16,
@@ -60,10 +130,34 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                       isFavorite ? Icons.favorite : Icons.favorite_border,
                       color: const Color.fromARGB(255, 130, 6, 161),
                     ),
-                    onPressed: () {
-                      setState(() {
-                        isFavorite = !isFavorite;
-                      });
+                    onPressed: () async {
+                      if (!isFavorite) {
+                        final doc = await FirebaseFirestore.instance
+                            .collection('favorites')
+                            .add({
+                          "name": product["name"],
+                          "price": product["price"],
+                          "image": product["image"],
+                          "category": product["category"],
+                          "description": product["description"],
+                          "created_at": DateTime.now(),
+                        });
+
+                        setState(() {
+                          isFavorite = true;
+                          favoriteId = doc.id;
+                        });
+                      } else {
+                        await FirebaseFirestore.instance
+                            .collection('favorites')
+                            .doc(favoriteId)
+                            .delete();
+
+                        setState(() {
+                          isFavorite = false;
+                          favoriteId = '';
+                        });
+                      }
                     },
                   ),
                 ),
@@ -71,16 +165,16 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
             ],
           ),
 
-          /// 🔽 التفاصيل
+          /// ================= DETAILS =================
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  /// الاسم
+                  /// ================= NAME =================
                   Text(
-                    product["name"],
+                    product["name"] ?? '',
                     style: const TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -89,17 +183,19 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
 
                   const SizedBox(height: 6),
 
-                  /// القسم
+                  /// ================= CATEGORY =================
                   Text(
-                    product["category"],
-                    style: const TextStyle(color: Colors.grey),
+                    product["category"] ?? '',
+                    style: const TextStyle(
+                      color: Colors.grey,
+                    ),
                   ),
 
                   const SizedBox(height: 10),
 
-                  /// السعر
+                  /// ================= PRICE =================
                   Text(
-                    "${product["price"]} ر.س",
+                    "${product["price"] ?? 0} ر.س",
                     style: const TextStyle(
                       fontSize: 20,
                       color: Color(0xFF7B3FE4),
@@ -107,17 +203,19 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 29),
+                  const SizedBox(height: 20),
 
-                  /// وصف
-                  const Text(
-                    "This is a beautiful mystery gift box that contains a surprise item inside. Perfect for gifts and special occasions.",
-                    style: TextStyle(color: Colors.grey),
+                  /// ================= DESCRIPTION =================
+                  Text(
+                    product["description"] ?? '',
+                    style: const TextStyle(
+                      color: Colors.grey,
+                    ),
                   ),
 
                   const SizedBox(height: 20),
 
-                  /// 🔢 اختيار الكمية
+                  /// ================= QUANTITY =================
                   Row(
                     children: [
                       const Text(
@@ -131,14 +229,16 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                       Container(
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(12),
-                          color: Color.fromARGB(255, 226, 214, 226),
+                          color: const Color.fromARGB(255, 226, 214, 226),
                         ),
                         child: Row(
                           children: [
                             IconButton(
                               onPressed: () {
                                 if (quantity > 1) {
-                                  setState(() => quantity--);
+                                  setState(() {
+                                    quantity--;
+                                  });
                                 }
                               },
                               icon: const Icon(Icons.remove),
@@ -146,7 +246,9 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                             Text(quantity.toString()),
                             IconButton(
                               onPressed: () {
-                                setState(() => quantity++);
+                                setState(() {
+                                  quantity++;
+                                });
                               },
                               icon: const Icon(Icons.add),
                             ),
@@ -158,28 +260,25 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
 
                   const Spacer(),
 
-                  /// 🛒 زر إضافة للسلة
+                  /// ================= ADD TO CART =================
                   SizedBox(
                     width: double.infinity,
                     height: 55,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color.fromARGB(255, 64, 8, 89),
+                        backgroundColor:
+                            const Color.fromARGB(255, 178, 172, 197),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
                       ),
-                      onPressed: () {
-                        ///  هنا تضيف للسلة مستقبلاً
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("تمت الاضافة للسلة ")),
-                        );
-                      },
+                      onPressed: addToCart,
                       child: const Text(
                         "إضافة للسلة",
                         style: TextStyle(
                           fontSize: 16,
-                          color: Color.fromARGB(255, 248, 223, 249),
+                          color: Color.fromARGB(255, 2, 2, 2),
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
