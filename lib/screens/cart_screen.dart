@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:gifts_store/screens/home_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class CartScreen extends StatefulWidget {
@@ -25,7 +24,34 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   // ================= BUY ORDER =================
+  // Future<void> checkout(List<QueryDocumentSnapshot> items) async {
+  //   if (items.isEmpty) return;
+
+  //   await FirebaseFirestore.instance.collection('orders').add({
+  //     "items": items.map((e) => e.data()).toList(),
+  //     "total": calculateTotal(items),
+  //     "status": "pending",
+
+  //     // 👇 المتغيرات
+  //     "customerName": userName,
+  //     "customerAddress": userAddress,
+
+  //     "created_at": DateTime.now(),
+  //   });
+
+  //   for (var item in items) {
+  //     await FirebaseFirestore.instance.collection('cart').doc(item.id).delete();
+  //   }
+
+  //   ScaffoldMessenger.of(context).showSnackBar(
+  //     const SnackBar(content: Text("تم إرسال الطلب")),
+  //   );
+  // }
   Future<void> checkout(List<QueryDocumentSnapshot> items) async {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) return;
+
     if (items.isEmpty) return;
 
     await FirebaseFirestore.instance.collection('orders').add({
@@ -33,9 +59,11 @@ class _CartScreenState extends State<CartScreen> {
       "total": calculateTotal(items),
       "status": "pending",
 
-      // 👇 المتغيرات
       "customerName": userName,
       "customerAddress": userAddress,
+      "customerPhone": userPhone,
+
+      "userId": user.uid, // 🔥 المهم
 
       "created_at": DateTime.now(),
     });

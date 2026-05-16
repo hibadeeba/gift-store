@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class ProductDetailsScreen extends StatefulWidget {
   final Map<String, dynamic> product;
@@ -86,23 +87,16 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                     bottomRight: Radius.circular(30),
                   ),
                 ),
-                child: Image.network(
-                  product["image"] ?? '',
+                child: CachedNetworkImage(
+                  imageUrl: product["image"] ?? '',
                   fit: BoxFit.contain,
-                  loadingBuilder: (context, child, progress) {
-                    if (progress == null) return child;
-
-                    return const Center(
-                      child: CircularProgressIndicator(),
-                    );
-                  },
-                  errorBuilder: (context, error, stackTrace) {
-                    return const Icon(
-                      Icons.image_not_supported,
-                      size: 60,
-                      color: Colors.grey,
-                    );
-                  },
+                  placeholder: (context, url) =>
+                      const Center(child: CircularProgressIndicator()),
+                  errorWidget: (context, url, error) => const Icon(
+                    Icons.image_not_supported,
+                    size: 60,
+                    color: Colors.grey,
+                  ),
                 ),
               ),
 
@@ -126,40 +120,50 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                 child: CircleAvatar(
                   backgroundColor: const Color.fromARGB(255, 240, 223, 243),
                   child: IconButton(
-                    icon: Icon(
-                      isFavorite ? Icons.favorite : Icons.favorite_border,
-                      color: const Color.fromARGB(255, 130, 6, 161),
-                    ),
-                    onPressed: () async {
-                      if (!isFavorite) {
-                        final doc = await FirebaseFirestore.instance
-                            .collection('favorites')
-                            .add({
-                          "name": product["name"],
-                          "price": product["price"],
-                          "image": product["image"],
-                          "category": product["category"],
-                          "description": product["description"],
-                          "created_at": DateTime.now(),
-                        });
+                      icon: Icon(
+                        isFavorite ? Icons.favorite : Icons.favorite_border,
+                        color: const Color.fromARGB(255, 130, 6, 161),
+                      ),
+                      onPressed: () async {
+                        final user = FirebaseAuth.instance.currentUser;
 
-                        setState(() {
-                          isFavorite = true;
-                          favoriteId = doc.id;
-                        });
-                      } else {
-                        await FirebaseFirestore.instance
-                            .collection('favorites')
-                            .doc(favoriteId)
-                            .delete();
+                        if (user == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text("يجب تسجيل الدخول أولاً")),
+                          );
+                          return;
+                        }
 
-                        setState(() {
-                          isFavorite = false;
-                          favoriteId = '';
-                        });
-                      }
-                    },
-                  ),
+                        if (!isFavorite) {
+                          final doc = await FirebaseFirestore.instance
+                              .collection('favorites')
+                              .add({
+                            "name": product["name"],
+                            "price": product["price"],
+                            "image": product["image"],
+                            "category": product["category"],
+                            "description": product["description"],
+                            "userId": user.uid, // 🔥 الآن مضمون
+                            "created_at": DateTime.now(),
+                          });
+
+                          setState(() {
+                            isFavorite = true;
+                            favoriteId = doc.id;
+                          });
+                        } else {
+                          await FirebaseFirestore.instance
+                              .collection('favorites')
+                              .doc(favoriteId)
+                              .delete();
+
+                          setState(() {
+                            isFavorite = false;
+                            favoriteId = '';
+                          });
+                        }
+                      }),
                 ),
               ),
             ],
@@ -195,7 +199,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
 
                   /// ================= PRICE =================
                   Text(
-                    "${product["price"] ?? 0} ر.س",
+                    "${product["price"] ?? 0} ر.ي",
                     style: const TextStyle(
                       fontSize: 20,
                       color: Color(0xFF7B3FE4),
